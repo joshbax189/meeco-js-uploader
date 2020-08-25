@@ -5,6 +5,7 @@ const Meeco = require('@meeco/sdk');
 
 const Binding = require('./Binding');
 const LeafBinding = require('./LeafBinding');
+const JSONComponent = require('./JSONComponent');
 
 const STORAGE_KEY = 'user_token';
 
