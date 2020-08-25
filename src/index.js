@@ -109,12 +109,15 @@ m.render(document.body, [
       m('h4', 'Meeco Auth'),
       m('input', {type: "text",
                   placeholder: "secret",
-                  value: "1.4aBdw1.76BkP9-Wh6SFH-SLSboT-Ug82T4-61TJ6B-kajWc5-5vEUDe-jk",
+                  value: User.secret,
                   oninput: function (e) { User.secret = e.target.value; }}),
       m('input', {type: "password",
                   oninput: function (e) { User.password = e.target.value; }}),
       m('input', {type: "submit", value: "Go"}),
-      authToken ? m('p', 'Token: ' + authToken) : null,
+      m('button', {onclick: function() {
+        sessionStorage.removeItem(STORAGE_KEY); authToken = ''
+      }}, 'Clear Token'),
+      m('p', authToken ? 'Token: ' + authToken : null),
     ])),
   m('div', [
     m('h4', 'JSON schema'),
