@@ -91,11 +91,6 @@ function readData(e) {
 }
 
 m.render(document.body, [
-  m('div', [
-    m('label', 'JSON schema'),
-    m('input', {type: 'file', onchange: readData}),
-  ]),
-  m('#outline'),
   m('div',
     m('form', {
       onsubmit: async function(e) {
@@ -114,5 +109,32 @@ m.render(document.body, [
       m('input', {type: "password",
                   oninput: function (e) { User.password = e.target.value; }}),
       m('input', {type: "submit", value: "Go"}),
-    ]))
+    ])),
+  m('div', [
+    m('h4', 'JSON schema'),
+    m('div',
+      m('input', {type: 'file', onchange: readData})),
+  ]),
+  m('#outline'),
+  m('div', [
+    m('h4', 'Template Binding'),
+    m('p#template-output', 'None')
+  ]),
+  m('div', [
+    m('h4', 'Data Input'),
+    m('form', {
+      onsubmit: function(e) {
+        e.preventDefault();
+        console.log('process json');
+        //TODO process JSON
+      }
+    }, [
+      m('textarea.json-input', { oninput: function (e) { inputJSON = e.target.value; } }),
+      m('button[type="submit"]', "Convert to Item")
+    ])
+  ]),
+  m('div', [
+    m('h4', 'Result Item'),
+    m('p#result-output', 'None')
+  ])
 ]);
