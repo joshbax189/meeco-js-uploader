@@ -5,6 +5,8 @@ module.exports = {
   entry: "./src/index.js",
   devServer: {
     port: 1234,
+    watchContentBase: true,
+    // contentBase: "./bin"
   },
   watchOptions: {
     ignored: ['src/**/.#*', 'src/.#*']
