@@ -50,26 +50,29 @@ let mapControlC = {
   ])
 };
 
-function mkDataComponent(obj) {
-  let inner = Object.entries(obj).map(x =>
-    m('.node', [
-      m('input', {type: 'text', value: x[0].toString()}),
-      ': ',
-      (x[1] && typeof x[1] == 'object' && !x[1].isArray) ? m(mkDataComponent(x[1])) : m(mkLeafC(x[1])),
-      m(mapControlC),
-    ]));
-  return {
-    view: () => m('.obj', /*{key: obj}, */ inner)
-  };
+function BindingComponent(binding) {
+  if (binding instanceof Binding) {
+    let inner = binding.children.map(x => m(BindingComponent(x)));
+    return {
+      view: () =>
+      m('.node', [
+        m('input', {type: 'text', value: binding.name}),
+        ': ',
+        m('.obj', inner),
+        m(mapControlC),
+      ])
+    };
+  } else if (binding instanceof LeafBinding) {
+    return {
+      view: () => m('.node', [
+        m('input', {type: 'text', value: binding.name}),
+        ': ',
+        m('.leaf', binding.schemaType),
+        m(mapControlC),
+      ])
+    };
+  }
 }
-
-function mkLeafC(leafValue) {
-  let inner = leafValue.toString();
-  return {
-    view: () => m('.leaf', inner)
-  };
-}
-
 
 function readData(e) {
   //TODO check it's actually JSON
@@ -78,11 +81,11 @@ function readData(e) {
   const reader = new FileReader();
 
   reader.addEventListener('load', function (e) {
-    m.mount(document.getElementById('outline'), mkDataComponent(data));
     let data = JSON.parse(e.target.result);
     // console.log(data);
     let binding = new Binding(f.name, data);
     console.log(binding);
+    m.mount(document.getElementById('outline'), BindingComponent(binding));
   });
   reader.readAsText(f);
 }

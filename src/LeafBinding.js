@@ -1,8 +1,16 @@
 const Vault = require('@meeco/vault-api-sdk');
 
-function LeafBinding(name, schemaType) {
+function LeafBinding(name, schemaObject, required) {
   this.name = name;
-  this.schemaType = schemaType;
+  this.schema = schemaObject;
+  if (this.schema.$ref) {
+    this.schemaType = 'reference';
+    this.description = this.schema.$ref;
+  } else {
+    this.schemaType = this.schema.type;
+    this.description = this.schema.description;
+  }
+  this.required = required || false;
 
   //Slot API:
   // 'id': json['id'],
@@ -26,7 +34,10 @@ function LeafBinding(name, schemaType) {
   // 'image': json['image'],
   // 'label': json['label'],
 
-  this.asSlot = Vault.SlotFromJSON({name: name, slot_type_name: schemaType});
+  this.asSlot = Vault.SlotFromJSON({name: name,
+                                    slot_type_name: this.schemaType,
+                                    description: this.description,
+                                    required: this.required});
 }
 
 module.exports = LeafBinding;

@@ -7,21 +7,29 @@ function Binding(name, schemaObject) {
 
   this.slots = [];
   this.associated = [];
-  for(k in schemaObject) {
-    if (k[0] == '$' || k == 'type') {
-      continue;
-    }
+  this.children = [];
+  for(k in schemaObject.properties) {
+    //TODO address required props
+    //TODO references!
 
     // if an object
-    let target = schemaObject[k];
-    if (target && typeof target == 'object') {
+    let target = schemaObject.properties[k];
+    if (target && typeof target == 'object' && target.type == 'object') {
       // create a link slot
-      this.slots.push(new LeafBinding(k, 'key_value'));
+      this.slots.push(new LeafBinding(k, {type: 'key_value'}));
       // create a Binding
-      this.associated.push(new Binding(k, target));
+      let b = new Binding(k, target);
+      this.associated.push(b);
+      this.children.push(b);
+    } else if (target.type == 'array') {
       //TODO special case if object is a list
+      let b = new LeafBinding(k, {type: 'array', description: target.items.type});
+      this.slots.push(b);
+      this.children.push(b);
     } else {
-      this.slots.push(new LeafBinding(k, target));
+      let b = new LeafBinding(k, target);
+      this.slots.push(b);
+      this.children.push(b);
     }
   }
 
@@ -47,6 +55,9 @@ function Binding(name, schemaObject) {
                                                     description: schemaObject.description});
   //TODO not quite: Slots might need to be flattened
   //Format for SDK call
+  this.getSlots = function () {
+    return this.associated.reduce((acc, x) => acc.concat(x.getSlots()), this.slots).map(x => x.asSlot);
+  };
 }
 
 module.exports = Binding;
