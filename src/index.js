@@ -4,6 +4,7 @@ const m = require('mithril');
 const Meeco = require('@meeco/sdk');
 
 const Binding = require('./Binding');
+const LeafBinding = require('./LeafBinding');
 
 const environment = {
   vault: {
