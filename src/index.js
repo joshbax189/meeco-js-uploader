@@ -24,9 +24,15 @@ const vaultFactory = Meeco.vaultAPIFactory(environment);
 
 let User = {
   secret: "1.4aBdw1.76BkP9-Wh6SFH-SLSboT-Ug82T4-61TJ6B-kajWc5-5vEUDe-jk",
-  password: ''
+  password: '',
+  authData: {},
+  vault: {}
 };
-let userAuth;
+
+//API factories, once logged in
+//Note: Template creation is not defined in factory
+let APIs = {};
+
 //Eventual target for conversion to Item
 let inputJSON = '';
 
@@ -34,19 +40,17 @@ let authToken = sessionStorage.getItem(STORAGE_KEY);
 
 //TODO create a template
 function onAuth() {
-  userVault = vaultFactory(userAuth);
-  ItemTemplateAPI = userVault.ItemTemplateApi;
+  let userVault = vaultFactory(User.authData);
+  APIs.ItemTemplateAPI = userVault.ItemTemplateApi;
   //alt
-  SlotAPI = userVault.SlotApi;
-  sessionStorage.setItem(STORAGE_KEY, userAuth.vault_access_token);
-  console.log(SlotAPI);
+  APIs.SlotAPI = userVault.SlotApi;
+  sessionStorage.setItem(STORAGE_KEY, User.authData.vault_access_token);
+  console.log(APIs);
 }
 
 let mapControlC = {
   view: () => m('span', [
     m('button', 'Hide'),
-    // m('button', 'Visit'),
-    // m('button', 'Rename')
   ])
 };
 
@@ -96,8 +100,8 @@ m.render(document.body, [
       onsubmit: async function(e) {
         e.preventDefault();
         console.log(User);
-        userAuth = await loginService.get(User.password, User.secret);
-        console.log(userAuth);
+        User.authData = await loginService.get(User.password, User.secret);
+        console.log(User.authData);
         onAuth();
       }
     }, [
@@ -109,6 +113,7 @@ m.render(document.body, [
       m('input', {type: "password",
                   oninput: function (e) { User.password = e.target.value; }}),
       m('input', {type: "submit", value: "Go"}),
+      authToken ? m('p', 'Token: ' + authToken) : null,
     ])),
   m('div', [
     m('h4', 'JSON schema'),
