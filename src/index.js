@@ -6,6 +6,7 @@ const Meeco = require('@meeco/sdk');
 const Binding = require('./Binding');
 const LeafBinding = require('./LeafBinding');
 const JSONComponent = require('./JSONComponent');
+const BindingComponent = require('./BindingComponent');
 
 const STORAGE_KEY = 'user_token';
 
@@ -74,36 +75,6 @@ function getTemplateDict(vaultHost, token) {
 
       return templateDict;
     });
-}
-
-let mapControlC = {
-  view: () => m('span', [
-    m('button', 'Hide'),
-  ])
-};
-
-function BindingComponent(binding) {
-  if (binding instanceof Binding) {
-    let inner = binding.children.map(x => m(BindingComponent(x)));
-    return {
-      view: () =>
-      m('.node', [
-        m('input', {type: 'text', value: binding.name}),
-        ': ',
-        m('.obj', inner),
-        m(mapControlC),
-      ])
-    };
-  } else if (binding instanceof LeafBinding) {
-    return {
-      view: () => m('.node', [
-        m('input', {type: 'text', value: binding.name}),
-        ': ',
-        m('.leaf', binding.schemaType),
-        m(mapControlC),
-      ])
-    };
-  }
 }
 
 //TODO - until API call
