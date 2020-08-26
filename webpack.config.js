@@ -1,15 +1,17 @@
 const path = require("path");
-// const HtmlWebpackPlugin = require("html-webpack-plugin");
+const HtmlWebpackPlugin = require("html-webpack-plugin");
 
 module.exports = {
+  mode: 'development',
   entry: "./src/index.js",
+  output: {
+    path: path.resolve(__dirname, "./dist"),
+    filename: "app.js",
+  },
   devServer: {
     port: 1234,
     watchContentBase: true,
-    // contentBase: "./bin"
-  },
-  watchOptions: {
-    ignored: ['src/**/.#*', 'src/.#*']
+    contentBase: "./dist"
   },
   module: {
     rules: [
@@ -43,13 +45,9 @@ module.exports = {
   resolve: {
     extensions: [".tsx", ".ts", ".js"],
   },
-  // output: {
-  //   path: path.resolve(__dirname, "./dist"),
-  //   filename: "index_bundle.js",
-  // },
   plugins: [
-  //   new HtmlWebpackPlugin({
-  //     template: path.resolve(__dirname, "./dist/index.html"),
-    //   }),
+    new HtmlWebpackPlugin({
+      template: path.resolve(__dirname, "./dist/index.html"),
+    }),
   ],
 };
