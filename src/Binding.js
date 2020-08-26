@@ -1,20 +1,31 @@
-const Vault = require('@meeco/vault-api-sdk');
+'use strict';
+
 const LeafBinding = require('./LeafBinding');
 const m = require('mithril');
 
+/**
+ * Binds a JSONSchema given by schemaObject to an ItemTemplate specified by name.
+ * Creates the ItemTemplate if needed.
+ */
 function Binding(name, schemaObject) {
   this.name = name;
   this.schemaObject = schemaObject;
+  // Do not create an ItemTemplate or include this among the Slots of the parent Item.
   this.hidden = false;
+  // Store any existing ItemTemplate data here
+  this.template = { id: 123 };
 
-  this.slots = []; //Children which are LeafSlots PLUS key_value type slots representing Bindings
-  this.associated = []; // Children which are Bindings
-  this.children = []; // All properties of this object
-  for(k in schemaObject.properties) {
+  // All properties of this object as Bindings or LeafBindings
+  this.children = [];
+  // Children which are LeafSlots PLUS key_value type slots representing Bindings
+  this.slots = [];
+  // Subset of this.children which are Bindings (not LeafBindings)
+  this.associated = [];
+
+  for(let k in schemaObject.properties) {
     //TODO address required props, but required prop in ItemTemplate is broken...
     //TODO references!
 
-    // if an object
     let target = schemaObject.properties[k];
     if (target && typeof target == 'object' && target.type == 'object') {
       // create a link slot
@@ -35,23 +46,15 @@ function Binding(name, schemaObject) {
     }
   }
 
-  this.asItemTemplate = Vault.ItemTemplateFromJSON({name: name,
-                                                    slots: this.slots,
-                                                    description: schemaObject.description});
-
+  /** Generate POST data for /items_templates */
   this.asTemplateData = function () {
     return { label: this.name,
              name: this.name,
              description: this.schemaObject.description,
              slots_attributes: this.slots.map(x => x.asSlotData())
            };
-  }
-
-  this.getSlots = function () {
-    return this.associated.reduce((acc, x) => acc.concat(x.getSlots()), this.slots).map(x => x.asSlot);
   };
 
-  //TODO originally used in asJSONBinding, unused now
   this.raw_slots = [];
   // Depends on template data
   // TODO try make it an async
@@ -65,10 +68,12 @@ function Binding(name, schemaObject) {
         return acc;
       }, {});
     }
-  }
+  };
 
-  // Call SDK services to create all needed Templates
-  // Update in place with responses
+  /**
+   * Call SDK services to create all needed Templates
+   * Update in place with responses
+   */
   this.pushTemplates = function (vaultHost, token, templateDict) {
     console.log(this.asTemplateData());
     //TODO if exist, do PUT instead
@@ -93,14 +98,12 @@ function Binding(name, schemaObject) {
       });
     }
 
-    for (t in this.associated) {
+    for (let t in this.associated) {
       this.associated[t].pushTemplates(vaultHost, token, templateDict);
     }
-  }
+  };
 
-  this.template = { id: 123 };
-
-  // Record ItemTemplate and Slot ids against their JSON paths
+  /** Record ItemTemplate and Slot ids against their JSON paths */
   this.asJSONBinding = function() {
     //let slotMap = this.getSlotsMap();
     let propMap = this.children.reduce((acc, x) => {
@@ -140,7 +143,7 @@ function Binding(name, schemaObject) {
       template_name: this.name,
       properties: propMap
     };
-  }
+  };
 }
 
 module.exports = Binding;

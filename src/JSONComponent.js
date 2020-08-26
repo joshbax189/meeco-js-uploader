@@ -1,22 +1,29 @@
+'use strict';
+
 const m = require('mithril');
 
+/**
+ * A Mithril Component for pretty-printing JSON.
+ */
 function JSONComponent(obj) {
   if (typeof obj == 'object') {
-    let inner = Object.entries(obj).map(x => m('.node', [
-      m('span', x[0]),
+    let inner = Object.entries(obj).map(([key, value]) => m('.node', [
+      m('span', key),
       ': ',
-      m(JSONComponent(x[1])),
+      m(JSONComponent(value)),
       ','
     ]));
+
+    let open = '{';
+    let close = '}';
     if (obj instanceof Array) {
-      return {
-        view: () => [ '[', m('.obj', inner), ']']
-      };
-    } else {
-      return {
-        view: () => [ '{', m('.obj', inner), '}' ],
-      };
+      open = '[';
+      close = ']';
     }
+
+    return {
+      view: () => [open, m('.obj', inner), close]
+    };
   } else {
     return {
       view: () => m('span', (obj || obj !== undefined) ? obj.toString() : 'undefined')
