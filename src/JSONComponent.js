@@ -19,7 +19,7 @@ function JSONComponent(obj) {
     }
   } else {
     return {
-      view: () => m('span', obj.toString())
+      view: () => m('span', (obj || obj !== undefined) ? obj.toString() : 'undefined')
     };
   }
 }

@@ -106,6 +106,10 @@ function BindingComponent(binding) {
   }
 }
 
+//TODO - until API call
+let resultItems = [];
+
+//TODO
 // Use a binding to rewrite an instance of a schema
 function transformData(binding, data) {
   // Walk the JSON and binding at the same time
@@ -113,24 +117,33 @@ function transformData(binding, data) {
 
   let itemSlotAttrs = [];
 
-  for (k in data) {
-    let slotVal;
-    if (binding.properties[k].type == 'object') {
-      slotVal = transformData(binding.properties[k], data[k]); // this may trigger an API call
-    } else {
-      slotVal = data[k];
+  //TODO special case if an array
+  if (data instanceof Array) {
+    for (let k in data) {
+      itemSlotAttrs.push({
+        name: binding.name + '_array_' + k,
+        value: data[k]
+      });
     }
-    // TODO encode val
-    let slotAttr = {
-      name: '',
-      label: 'optional',
-      value: '?',
-      encrypted_value: 'TODO'
-    }
+  } else {
+    for (let k in data) {
+      let slotVal;
+      if (binding.properties[k].type == 'item_template') {
+        slotVal = transformData(binding.properties[k], data[k]); // this may trigger an API call
+      } else {
+        slotVal = data[k];
+      }
+      // TODO encode val
+      let slotAttr = {
+        name: binding.properties[k].name,
+        label: 'optional',
+        value: slotVal,
+        //encrypted_value: 'TODO'
+      };
 
-    itemSlotAttrs.push(slotAttr);
+      itemSlotAttrs.push(slotAttr);
+    }
   }
-
   // Wait for any triggered API calls from children
   // Then trigger own call.
 
@@ -138,9 +151,18 @@ function transformData(binding, data) {
     label: '',
     template_name: binding.template_name,
     slots_attributes: itemSlotAttrs,
-  }
+  };
 
   // POST this guy
+  resultItems.push(itemData);
+  return 'fake_item_id';
+}
+
+function convertItemHandler() {
+  let data = JSON.parse(inputJSON);
+  transformData(workingBinding.asJSONBinding(), data);
+  console.log(resultItems);
+  m.mount(document.getElementById('result-output'), JSONComponent(resultItems));
 }
 
 function readData(e) {
@@ -209,13 +231,13 @@ m.render(document.body, [
       m('form', {
         onsubmit: function(e) {
           e.preventDefault();
-          console.log('process json');
-          //TODO process JSON
+          convertItemHandler();
         }
       }, [
         m('button[type="submit"]', "Convert to Item"),
         m('div',
-          m('textarea.json-input', { oninput: function (e) { inputJSON = e.target.value; } })),
+          m('textarea.json-input', { oninput: function (e) { inputJSON = e.target.value; } },
+         '{"familyName": "Jim","givenName": "Bob","honorificPrefix": [ "Hon.", "Dr.", "Mr" ],"email": {"type": "home","value": "jim.bob@email.com"}}\n')),
       ])
     ]),
     m('div', [
