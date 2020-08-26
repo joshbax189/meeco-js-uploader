@@ -35,7 +35,7 @@ let User = {
 let APIs = {};
 
 //Eventual target for conversion to Item
-let inputJSON = '';
+let inputJSON = '{"familyName": "Jim","givenName": "Bob","honorificPrefix": [ "Hon.", "Dr.", "Mr" ],"email": {"type": "home","value": "jim.bob@email.com"}}';
 //Generated binding
 let workingBinding;
 
@@ -173,7 +173,7 @@ function readData(e) {
 
   reader.addEventListener('load', function (e) {
     let data = JSON.parse(e.target.result);
-    workingBinding = new Binding(f.name, data);
+    workingBinding = new Binding(f.name.replace('.', '_'), data);
     console.log(workingBinding);
     m.mount(document.getElementById('outline'), BindingComponent(workingBinding));
   });
@@ -222,6 +222,7 @@ m.render(document.body, [
     ]),
     m('div', [
       m('h4', 'Template Binding'),
+      m('button', 'Save'),
       m('p#template-output', 'None')
     ]),
   ]),
@@ -237,7 +238,16 @@ m.render(document.body, [
         m('button[type="submit"]', "Convert to Item"),
         m('div',
           m('textarea.json-input', { oninput: function (e) { inputJSON = e.target.value; } },
-         '{"familyName": "Jim","givenName": "Bob","honorificPrefix": [ "Hon.", "Dr.", "Mr" ],"email": {"type": "home","value": "jim.bob@email.com"}}\n')),
+           '{\n\
+  "familyName": "Jim",\n\
+  "givenName": "Bob",\n\
+  "honorificPrefix": [ "Hon.", "Dr.", "Mr" ],\n\
+  "email": {\n\
+    "type": "home",\n\
+    "value": "jim.bob@email.com"\n\
+  }\
+}'
+)),
       ])
     ]),
     m('div', [

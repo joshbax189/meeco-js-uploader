@@ -1,0 +1,9 @@
+{
+  "familyName": "Jim",
+  "givenName": "Bob",
+  "honorificPrefix": [ "Hon.", "Dr.", "Mr" ],
+  "email": {
+    "type": "home",
+    "value": "jim.bob@email.com"
+  }
+}
