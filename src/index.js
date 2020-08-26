@@ -60,12 +60,19 @@ function getTemplateDict(vaultHost, token) {
       url: vaultHost + '/item_templates',
       headers: { 'Authorization': 'Bearer ' + token }
     }).then(data => {
+      let slotMap = data.slots.reduce((acc, x) => {
+        acc[x.id] = x;
+        return acc;
+      }, {});
       //Name -> Id map
       templateDict = data.item_templates.reduce((acc, x) => {
-        acc[x.name] = x.id;
+        acc[x.name] = x;
+        x.slots = x.slot_ids.map(y => slotMap[y]);
         return acc;
       }, {});
       console.log(templateDict);
+
+      return templateDict;
     });
 }
 
@@ -99,6 +106,43 @@ function BindingComponent(binding) {
   }
 }
 
+// Use a binding to rewrite an instance of a schema
+function transformData(binding, data) {
+  // Walk the JSON and binding at the same time
+  // Create Item instances as needed
+
+  let itemSlotAttrs = [];
+
+  for (k in data) {
+    let slotVal;
+    if (binding.properties[k].type == 'object') {
+      slotVal = transformData(binding.properties[k], data[k]); // this may trigger an API call
+    } else {
+      slotVal = data[k];
+    }
+    // TODO encode val
+    let slotAttr = {
+      name: '',
+      label: 'optional',
+      value: '?',
+      encrypted_value: 'TODO'
+    }
+
+    itemSlotAttrs.push(slotAttr);
+  }
+
+  // Wait for any triggered API calls from children
+  // Then trigger own call.
+
+  let itemData = {
+    label: '',
+    template_name: binding.template_name,
+    slots_attributes: itemSlotAttrs,
+  }
+
+  // POST this guy
+}
+
 function readData(e) {
   //TODO check it's actually JSON
   //TODO report error if no JSON
@@ -115,8 +159,8 @@ function readData(e) {
 }
 
 function pushTemplates() {
-  getTemplateDict(environment.vault.url, authToken).then(() => {
-    workingBinding.pushTemplates(environment.vault.url, authToken, templateDict);
+  getTemplateDict(environment.vault.url, authToken).then(dict => {
+    workingBinding.pushTemplates(environment.vault.url, authToken, dict);
     m.mount(document.getElementById('template-output'), JSONComponent(workingBinding.asJSONBinding()));
   });
 }
@@ -169,8 +213,9 @@ m.render(document.body, [
           //TODO process JSON
         }
       }, [
-        m('textarea.json-input', { oninput: function (e) { inputJSON = e.target.value; } }),
-        m('button[type="submit"]', "Convert to Item")
+        m('button[type="submit"]', "Convert to Item"),
+        m('div',
+          m('textarea.json-input', { oninput: function (e) { inputJSON = e.target.value; } })),
       ])
     ]),
     m('div', [
