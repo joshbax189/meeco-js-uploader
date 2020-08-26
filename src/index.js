@@ -36,6 +36,8 @@ let APIs = {};
 
 //Eventual target for conversion to Item
 let inputJSON = '';
+//Generated binding
+let workingBinding;
 
 let authToken = sessionStorage.getItem(STORAGE_KEY);
 
@@ -47,6 +49,24 @@ function onAuth() {
   APIs.SlotAPI = userVault.SlotApi;
   sessionStorage.setItem(STORAGE_KEY, User.authData.vault_access_token);
   console.log(APIs);
+}
+
+//Name -> Id map
+let templateDict = {};
+
+function getTemplateDict(vaultHost, token) {
+    return m.request({
+      method: 'GET',
+      url: vaultHost + '/item_templates',
+      headers: { 'Authorization': 'Bearer ' + token }
+    }).then(data => {
+      //Name -> Id map
+      templateDict = data.item_templates.reduce((acc, x) => {
+        acc[x.name] = x.id;
+        return acc;
+      }, {});
+      console.log(templateDict);
+    });
 }
 
 let mapControlC = {
@@ -87,12 +107,18 @@ function readData(e) {
 
   reader.addEventListener('load', function (e) {
     let data = JSON.parse(e.target.result);
-    // console.log(data);
-    let binding = new Binding(f.name, data);
-    console.log(binding);
-    m.mount(document.getElementById('outline'), BindingComponent(binding));
+    workingBinding = new Binding(f.name, data);
+    console.log(workingBinding);
+    m.mount(document.getElementById('outline'), BindingComponent(workingBinding));
   });
   reader.readAsText(f);
+}
+
+function pushTemplates() {
+  getTemplateDict(environment.vault.url, authToken).then(() => {
+    workingBinding.pushTemplates(environment.vault.url, authToken, templateDict);
+    m.mount(document.getElementById('template-output'), JSONComponent(workingBinding.asJSONBinding()));
+  });
 }
 
 m.render(document.body, [
@@ -119,31 +145,37 @@ m.render(document.body, [
       }}, 'Clear Token'),
       m('p', authToken ? 'Token: ' + authToken : null),
     ])),
-  m('div', [
-    m('h4', 'JSON schema'),
-    m('div',
-      m('input', {type: 'file', onchange: readData})),
+  m('.horiz', [
+    m('div', [
+      m('div', [
+        m('h4', 'JSON schema'),
+        m('input', {type: 'file', onchange: readData}),
+      ]),
+      m('#outline'),
+      m('button', {onclick: pushTemplates}, 'Push Templates'),
+    ]),
+    m('div', [
+      m('h4', 'Template Binding'),
+      m('p#template-output', 'None')
+    ]),
   ]),
-  m('#outline'),
-  m('div', [
-    m('h4', 'Template Binding'),
-    m('p#template-output', 'None')
-  ]),
-  m('div', [
-    m('h4', 'Data Input'),
-    m('form', {
-      onsubmit: function(e) {
-        e.preventDefault();
-        console.log('process json');
-        //TODO process JSON
-      }
-    }, [
-      m('textarea.json-input', { oninput: function (e) { inputJSON = e.target.value; } }),
-      m('button[type="submit"]', "Convert to Item")
+  m('.horiz', [
+    m('div', [
+      m('h4', 'Data Input'),
+      m('form', {
+        onsubmit: function(e) {
+          e.preventDefault();
+          console.log('process json');
+          //TODO process JSON
+        }
+      }, [
+        m('textarea.json-input', { oninput: function (e) { inputJSON = e.target.value; } }),
+        m('button[type="submit"]', "Convert to Item")
+      ])
+    ]),
+    m('div', [
+      m('h4', 'Result Item'),
+      m('p#result-output', 'None')
     ])
-  ]),
-  m('div', [
-    m('h4', 'Result Item'),
-    m('p#result-output', 'None')
   ])
 ]);
