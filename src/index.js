@@ -8,7 +8,8 @@ import LeafBinding from './LeafBinding.js';
 import BindingComponent from './BindingComponent.js';
 import JSONComponent from './JSONComponent.js';
 
-const STORAGE_KEY = 'user_token';
+const ACCESS_TOKEN = 'user_token';
+const USER_DEK = 'user_dek';
 
 const environment = {
   vault: {
@@ -21,39 +22,65 @@ const environment = {
   }
 };
 
-const loginService = new Meeco.UserService(environment);
-const vaultFactory = Meeco.vaultAPIFactory(environment);
-
 let User = {
   secret: "1.4aBdw1.76BkP9-Wh6SFH-SLSboT-Ug82T4-61TJ6B-kajWc5-5vEUDe-jk",
   password: '',
   authData: {},
-  vault: {}
 };
 
-//API factories, once logged in
-//Note: Template creation is not defined in factory
-let APIs = {};
+// TODO unused
+//Note: Template creation is not defined in ItemTemplateAPI...
+let APIs = {
+  vaultFactory: Meeco.vaultAPIFactory(environment),
+  ItemService: new Meeco.ItemService(environment),
+  init: function () {
 
-//Eventual target for conversion to Item
-let inputJSON = '{"familyName": "Jim","givenName": "Bob","honorificPrefix": [ "Hon.", "Dr.", "Mr" ],"email": {"type": "home","value": "jim.bob@email.com"}}';
+    // let userVault = APIs.vaultFactory(User.authData);
+    // if (App.authToken) {
+    //   APIs.ItemAPI = APIs.vaultFactory({vault_access_token: App.authToken}).ItemApi;
+    // }
+
+    // APIs.ItemTemplateAPI = userVault.ItemTemplateApi;
+    // APIs.ItemAPI = userVault.ItemApi;
+    // APIs.SlotAPI = userVault.SlotApi;
+    console.log(APIs);
+  }
+};
+
+// App state
+let App = {
+  //Target for conversion to Item
+  inputJSON: '{"familyName": "Jim","givenName": "Bob","honorificPrefix": [ "Hon.", "Dr.", "Mr" ],"email": {"type": "home","value": "jim.bob@email.com"}}',
+  authToken: sessionStorage.getItem(ACCESS_TOKEN),
+  userDEK: Meeco.EncryptionKey.fromRaw(sessionStorage.getItem(USER_DEK)),
+  loginService: new Meeco.UserService(environment),
+  //Name -> Id map
+  templateDict: {},
+  login: async function(accessToken) {
+    console.log('begin auth');
+    User.authData = await App.loginService.get(User.password, User.secret);
+    console.log(User.authData);
+
+    // APIs.init();
+
+    sessionStorage.setItem(ACCESS_TOKEN, User.authData.vault_access_token);
+    sessionStorage.setItem(USER_DEK, User.authData.data_encryption_key.key);
+    App.authToken = User.authData.vault_access_token;
+    App.userDEK = User.authData.data_encryption_key.key;
+  },
+  logout: function() {
+    sessionStorage.removeItem(ACCESS_TOKEN);
+    sessionStorage.removeItem(USER_DEK);
+    App.authToken = '';
+    App.userDEK = '';
+  },
+};
+
+APIs.init();
+
 //Generated binding
 let workingBinding;
 
-let authToken = sessionStorage.getItem(STORAGE_KEY);
-
-//TODO create a template
-function onAuth() {
-  let userVault = vaultFactory(User.authData);
-  APIs.ItemTemplateAPI = userVault.ItemTemplateApi;
-  //alt
-  APIs.SlotAPI = userVault.SlotApi;
-  sessionStorage.setItem(STORAGE_KEY, User.authData.vault_access_token);
-  console.log(APIs);
-}
-
-//Name -> Id map
-let templateDict = {};
 
 function getTemplateDict(vaultHost, token) {
     return m.request({
@@ -65,15 +92,15 @@ function getTemplateDict(vaultHost, token) {
         acc[x.id] = x;
         return acc;
       }, {});
-      //Name -> Id map
-      templateDict = data.item_templates.reduce((acc, x) => {
+
+      App.templateDict = data.item_templates.reduce((acc, x) => {
         acc[x.name] = x;
         x.slots = x.slot_ids.map(y => slotMap[y]);
         return acc;
       }, {});
-      console.log(templateDict);
+      console.log(App.templateDict);
 
-      return templateDict;
+      return App.templateDict;
     });
 }
 
@@ -82,7 +109,7 @@ let resultItems = [];
 
 //TODO
 // Use a binding to rewrite an instance of a schema
-function transformData(binding, data) {
+async function transformData(binding, data) {
   // Walk the JSON and binding at the same time
   // Create Item instances as needed
 
@@ -100,15 +127,15 @@ function transformData(binding, data) {
     for (let k in data) {
       let slotVal;
       if (binding.properties[k].type == 'item_template') {
-        slotVal = transformData(binding.properties[k], data[k]); // this may trigger an API call
+        slotVal = await transformData(binding.properties[k], data[k]);
       } else {
         slotVal = data[k];
       }
-      // TODO encode val
+
       let slotAttr = {
         name: binding.properties[k].name,
-        label: 'optional',
-        value: slotVal,
+        // label: 'optional',
+        value: slotVal.toString(),
         //encrypted_value: 'TODO'
       };
 
@@ -119,74 +146,86 @@ function transformData(binding, data) {
   // Then trigger own call.
 
   let itemData = {
-    label: '',
+    // label: 'auto label ignore',
+    item: { label: 'auto label ignore' }, //TODO correct?
     template_name: binding.template_name,
-    slots_attributes: itemSlotAttrs,
+    slots: itemSlotAttrs,
   };
 
-  // POST this guy
-  resultItems.push(itemData);
-  return 'fake_item_id';
+  // TODO encode vals - FML API clash
+  //let newItem = await APIs.ItemService.create(App.authToken, App.userDEK, new Meeco.ItemCreateData(itemData));
+  // try {
+
+  let newItemResponse = await Promise.all(itemData.slots.map(function (slot) {
+    return APIs.ItemService.encryptSlot(slot, App.userDEK);
+  })).then(slots_attributes =>
+    m.request({
+      method: 'POST',
+      url: environment.vault.url + '/items',
+      headers: { 'Authorization': 'Bearer ' + App.authToken },
+      body:{
+        template_name: itemData.template_name,
+        item: {
+          label: itemData.item.label,
+          slots_attributes: slots_attributes
+        }
+      }
+    }));
+
+  let newItem = newItemResponse.item;
+
+  resultItems.push(newItem);
+  return newItem.id;
+  // } catch (e) {
+  //   return Promise.reject(e);
+  // }
 }
 
-function convertItemHandler() {
-  let data = JSON.parse(inputJSON);
-  transformData(workingBinding.asJSONBinding(), data);
+async function convertItemHandler() {
+  let data = JSON.parse(App.inputJSON);
+  await transformData(workingBinding.asJSONBinding(), data);
   console.log(resultItems);
   m.mount(document.getElementById('result-output'), JSONComponent(resultItems));
 }
 
-function readData(e) {
-  //TODO check it's actually JSON
-  //TODO report error if no JSON
+function fileJSONHandler(e) {
   const f = e.target.files[0];
   const reader = new FileReader();
 
   reader.addEventListener('load', function (e) {
     let data = JSON.parse(e.target.result);
+    //TODO report error if no JSON
     workingBinding = new Binding(f.name.replace('.', '_'), data);
-    console.log(workingBinding);
     m.mount(document.getElementById('outline'), BindingComponent(workingBinding));
   });
   reader.readAsText(f);
 }
 
 function pushTemplates() {
-  getTemplateDict(environment.vault.url, authToken).then(dict => {
-    workingBinding.pushTemplates(environment.vault.url, authToken, dict);
+  getTemplateDict(environment.vault.url, App.authToken).then(dict => {
+    workingBinding.pushTemplates(environment.vault.url, App.authToken, dict);
     m.mount(document.getElementById('template-output'), JSONComponent(workingBinding.asJSONBinding()));
   });
 }
 
 m.render(document.body, [
-  m('div',
-    m('form', {
-      onsubmit: async function(e) {
-        e.preventDefault();
-        console.log(User);
-        User.authData = await loginService.get(User.password, User.secret);
-        console.log(User.authData);
-        onAuth();
-      }
-    }, [
-      m('h4', 'Meeco Auth'),
-      m('input', {type: "text",
-                  placeholder: "secret",
-                  value: User.secret,
-                  oninput: function (e) { User.secret = e.target.value; }}),
-      m('input', {type: "password",
-                  oninput: function (e) { User.password = e.target.value; }}),
-      m('input', {type: "submit", value: "Go"}),
-      m('button', {onclick: function() {
-        sessionStorage.removeItem(STORAGE_KEY); authToken = ''
-      }}, 'Clear Token'),
-      m('p', authToken ? 'Token: ' + authToken : null),
-    ])),
+  m('div', [
+    m('h4', 'Meeco Auth'),
+    m('input', {type: "text",
+                placeholder: "secret",
+                value: User.secret,
+                oninput: function (e) { User.secret = e.target.value; }}),
+    m('input', {type: "password",
+                oninput: function (e) { User.password = e.target.value; }}),
+    m('button', {onclick: App.login}, 'Go'),
+    m('button', {onclick: App.logout}, 'Clear Token'),
+    m('p', App.authToken ? 'Token: ' + App.authToken : null),
+  ]),
   m('.horiz', [
     m('div', [
       m('div', [
         m('h4', 'JSON schema'),
-        m('input', {type: 'file', onchange: readData}),
+        m('input', {type: 'file', onchange: fileJSONHandler}),
       ]),
       m('#outline'),
       m('button', {onclick: pushTemplates}, 'Push Templates'),
@@ -200,16 +239,10 @@ m.render(document.body, [
   m('.horiz', [
     m('div', [
       m('h4', 'Data Input'),
-      m('form', {
-        onsubmit: function(e) {
-          e.preventDefault();
-          convertItemHandler();
-        }
-      }, [
-        m('button[type="submit"]', "Convert to Item"),
-        m('div',
-          m('textarea.json-input', { oninput: function (e) { inputJSON = e.target.value; } },
-           '{\n\
+      m('button', {onclick: convertItemHandler}, "Convert to Item"),
+      m('div',
+        m('textarea.json-input', { oninput: function (e) { App.inputJSON = e.target.value; } },
+          '{\n\
   "familyName": "Jim",\n\
   "givenName": "Bob",\n\
   "honorificPrefix": [ "Hon.", "Dr.", "Mr" ],\n\
@@ -219,7 +252,6 @@ m.render(document.body, [
   }\
 }'
 )),
-      ])
     ]),
     m('div', [
       m('h4', 'Result Item'),
