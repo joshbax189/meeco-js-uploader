@@ -11,6 +11,10 @@ import LeafBinding from './LeafBinding.js';
 export default function Binding(name, schemaObject) {
   this.name = name;
   this.schemaObject = schemaObject;
+  //Use label to resolve references
+  if (schemaObject.$id) {
+    this.label = schemaObject.$id;
+  }
   // Do not create an ItemTemplate or include this among the Slots of the parent Item.
   this.hidden = false;
   // Store any existing ItemTemplate data here
@@ -30,7 +34,7 @@ export default function Binding(name, schemaObject) {
     let target = schemaObject.properties[k];
     if (target.type == 'object') {
       // create a link slot
-      this.slots.push(new LeafBinding(k, {type: 'key_value'}));
+      this.slots.push(new LeafBinding(k, {type: 'key_value', description: 'pointer to object ' + k}));
       // create a Binding
       let b = new Binding(k, target);
       this.associated.push(b);
@@ -110,6 +114,7 @@ export default function Binding(name, schemaObject) {
 
     return {
       //label: this.name,
+      name: this.name,
       type: 'item_template',
       id: this.template.id,
       template_name: this.name,

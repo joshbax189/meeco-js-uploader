@@ -4,7 +4,7 @@
  * Binding for a JSON schema object with no children, i.e. where type != object or array.
  * This becomes a Slot in an Item or ItemTemplate.
  */
-function LeafBinding(name, schemaObject, required) {
+export default function LeafBinding(name, schemaObject, required) {
   this.name = name;
   // The original JSONSchema
   this.schema = schemaObject;
@@ -39,8 +39,11 @@ function LeafBinding(name, schemaObject, required) {
     if (this.schemaType == 'array') {
       // TODO there should be a single Array ItemTemplate that is used in every schema
       return {
-        name: this.name,
-        id: 'special_id_of_array_template',
+        // TODO this should probably be an instance of Binding!!
+        // name: this.name,
+        name: 'json_array',
+        template_name: 'json_array',
+        // id: 'special_id_of_array_template',
         type: 'item_template',
         items: {
           type: this.schema.items['type']
@@ -50,6 +53,7 @@ function LeafBinding(name, schemaObject, required) {
       return {
         name: this.name,
         id: 'TODO_external_template_id',
+        description: this.description,
         type: 'item_template'
       };
     } else {
@@ -67,5 +71,3 @@ function LeafBinding(name, schemaObject, required) {
 function serializeType(typeString) {
   return 'type:' + typeString;
 }
-
-module.exports = LeafBinding;
