@@ -6,7 +6,7 @@ import m from 'mithril';
  * A Mithril Component for pretty-printing JSON.
  */
 export default function JSONComponent(obj) {
-  if (typeof obj == 'object') {
+  if (obj && typeof obj == 'object') {
     let inner = Object.entries(obj).map(([key, value]) => m('.node', [
       m('span', key),
       ': ',
@@ -26,7 +26,7 @@ export default function JSONComponent(obj) {
     };
   } else {
     return {
-      view: () => m('span', (obj || obj !== undefined) ? obj.toString() : 'undefined')
+      view: () => m('span', (obj != undefined) ? obj.toString() : 'undefined')
     };
   }
 }
