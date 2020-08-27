@@ -27,19 +27,15 @@ function Binding(name, schemaObject) {
     //TODO references!
 
     let target = schemaObject.properties[k];
-    if (target && typeof target == 'object' && target.type == 'object') {
+    if (target.type == 'object') {
       // create a link slot
       this.slots.push(new LeafBinding(k, {type: 'key_value'}));
       // create a Binding
       let b = new Binding(k, target);
       this.associated.push(b);
       this.children.push(b);
-    } else if (target.type == 'array') {
-      //TODO special case if object is a list
-      let b = new LeafBinding(k, {type: 'array', description: target.items.type});
-      this.slots.push(b);
-      this.children.push(b);
     } else {
+      // Note that Arrays are handled elsewhere
       let b = new LeafBinding(k, target);
       this.slots.push(b);
       this.children.push(b);
@@ -107,32 +103,7 @@ function Binding(name, schemaObject) {
   this.asJSONBinding = function() {
     //let slotMap = this.getSlotsMap();
     let propMap = this.children.reduce((acc, x) => {
-      if (x instanceof LeafBinding) {
-        // TODO what if array
-        if (x.schemaType == 'array') {
-          acc[x.name] = {
-            name: x.name,
-            id: 'special_id_of_array_template',
-            type: 'item_template',
-            items: {
-              type: 'TODO'
-            }
-          };
-        } else if (x.schemaType == 'reference') {
-          acc[x.name] = {
-            name: x.name,
-            id: 'TODO_external_template_id',
-            type: 'item_template'
-          };
-        } else {
-          acc[x.name] = {
-            name: x.name,
-            type: 'slot'
-          };
-        }
-      } else {
-        acc[x.name] = x.asJSONBinding();
-      }
+      acc[x.name] = x.asJSONBinding();
       return acc;
     }, {});
 

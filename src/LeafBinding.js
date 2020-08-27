@@ -29,6 +29,36 @@ function LeafBinding(name, schemaObject, required) {
       //required: this.required //Cannot set
     };
   };
+
+  /**
+   * Return A JSON object that describes the binding.
+   * Base case is just a Slot with a name, but Arrays and
+   * references need special handling.
+   */
+  this.asJSONBinding = function() {
+    if (this.schemaType == 'array') {
+      // TODO there should be a single Array ItemTemplate that is used in every schema
+      return {
+        name: this.name,
+        id: 'special_id_of_array_template',
+        type: 'item_template',
+        items: {
+          type: this.schema.items['type']
+        }
+      };
+    } else if (this.schemaType == 'reference') {
+      return {
+        name: this.name,
+        id: 'TODO_external_template_id',
+        type: 'item_template'
+      };
+    } else {
+      return {
+        name: this.name,
+        type: 'slot'
+      };
+    }
+  };
 }
 
 /**
