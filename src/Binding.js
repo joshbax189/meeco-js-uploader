@@ -1,13 +1,14 @@
 'use strict';
 
-const LeafBinding = require('./LeafBinding');
-const m = require('mithril');
+import m from 'mithril';
+
+import LeafBinding from './LeafBinding.js';
 
 /**
  * Binds a JSONSchema given by schemaObject to an ItemTemplate specified by name.
  * Creates the ItemTemplate if needed.
  */
-function Binding(name, schemaObject) {
+export default function Binding(name, schemaObject) {
   this.name = name;
   this.schemaObject = schemaObject;
   // Do not create an ItemTemplate or include this among the Slots of the parent Item.
@@ -116,5 +117,3 @@ function Binding(name, schemaObject) {
     };
   };
 }
-
-module.exports = Binding;

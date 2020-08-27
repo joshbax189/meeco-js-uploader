@@ -1,11 +1,11 @@
 'use strict';
 
-const m = require('mithril');
+import m from 'mithril';
 
 /**
  * A Mithril Component for pretty-printing JSON.
  */
-function JSONComponent(obj) {
+export default function JSONComponent(obj) {
   if (typeof obj == 'object') {
     let inner = Object.entries(obj).map(([key, value]) => m('.node', [
       m('span', key),
@@ -30,5 +30,3 @@ function JSONComponent(obj) {
     };
   }
 }
-
-module.exports = JSONComponent;

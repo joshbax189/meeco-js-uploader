@@ -1,12 +1,12 @@
 "use strict";
 
-const m = require('mithril');
-const Meeco = require('@meeco/sdk');
+import m from 'mithril';
+import * as Meeco from '@meeco/sdk';
 
-const Binding = require('./Binding');
-const LeafBinding = require('./LeafBinding');
-const JSONComponent = require('./JSONComponent');
-const BindingComponent = require('./BindingComponent');
+import Binding from './Binding.js';
+import LeafBinding from './LeafBinding.js';
+import BindingComponent from './BindingComponent.js';
+import JSONComponent from './JSONComponent.js';
 
 const STORAGE_KEY = 'user_token';
 

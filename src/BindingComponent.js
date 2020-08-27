@@ -1,9 +1,9 @@
 "use strict";
 
-const m = require('mithril');
+import m from 'mithril';
 
-const Binding = require('./Binding');
-const LeafBinding = require('./LeafBinding');
+import Binding from './Binding.js';
+import LeafBinding from './LeafBinding.js';
 
 let mapControlC = {
   view: () => m('span', [
@@ -11,7 +11,7 @@ let mapControlC = {
   ])
 };
 
-function BindingComponent(binding) {
+export default function BindingComponent(binding) {
   if (binding instanceof Binding) {
     let inner = binding.children.map(x => m(BindingComponent(x)));
     return {
@@ -34,5 +34,3 @@ function BindingComponent(binding) {
     };
   }
 }
-
-module.exports = BindingComponent;
