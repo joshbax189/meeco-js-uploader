@@ -1,5 +1,7 @@
 'use strict';
 
+import { ARRAY_NAME } from './TemplateSchemaStore.js';
+
 /**
  * Binding for a JSON schema object with no children, i.e. where type != object or array.
  * This becomes a Slot in an Item or ItemTemplate.
@@ -35,14 +37,14 @@ export default function LeafBinding(name, schemaObject, required) {
    * Base case is just a Slot with a name, but Arrays and
    * references need special handling.
    */
-  this.asJSONBinding = function() {
+  this.toJSON = function() {
     if (this.schemaType == 'array') {
       // TODO there should be a single Array ItemTemplate that is used in every schema
       return {
         // TODO this should probably be an instance of Binding!!
         // name: this.name,
-        name: 'json_array',
-        template_name: 'json_array',
+        name: ARRAY_NAME,
+        template_name: ARRAY_NAME,
         // id: 'special_id_of_array_template',
         type: 'item_template',
         items: {

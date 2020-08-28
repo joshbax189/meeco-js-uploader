@@ -7,6 +7,7 @@ import Binding from './Binding.js';
 import LeafBinding from './LeafBinding.js';
 import BindingComponent from './BindingComponent.js';
 import JSONComponent from './JSONComponent.js';
+import TemplateSchemaStore from './TemplateSchemaStore.js';
 
 const ACCESS_TOKEN = 'user_token';
 const USER_DEK = 'user_dek';
@@ -54,6 +55,7 @@ let App = {
   authToken: sessionStorage.getItem(ACCESS_TOKEN),
   userDEK: Meeco.EncryptionKey.fromRaw(sessionStorage.getItem(USER_DEK)),
   loginService: new Meeco.UserService(environment),
+  templates: null,
   //Name -> Id map
   templateDict: {},
   login: async function(accessToken) {
@@ -67,6 +69,7 @@ let App = {
     sessionStorage.setItem(USER_DEK, User.authData.data_encryption_key.key);
     App.authToken = User.authData.vault_access_token;
     App.userDEK = User.authData.data_encryption_key.key;
+    App.templates = new TemplateSchemaStore(environment.vault.url, App.authToken);
   },
   logout: function() {
     sessionStorage.removeItem(ACCESS_TOKEN);
@@ -76,11 +79,14 @@ let App = {
   },
 };
 
+if (App.authToken) {
+  App.templates = new TemplateSchemaStore(environment.vault.url, App.authToken);
+}
+
 APIs.init();
 
 //Generated binding
 let workingBinding;
-
 
 function getTemplateDict(vaultHost, token) {
     return m.request({
@@ -183,7 +189,7 @@ async function transformData(binding, data) {
 
 async function convertItemHandler() {
   let data = JSON.parse(App.inputJSON);
-  await transformData(workingBinding.asJSONBinding(), data);
+  await transformData(workingBinding.toJSON(), data);
   console.log(resultItems);
   m.mount(document.getElementById('result-output'), JSONComponent(resultItems));
 }
@@ -203,8 +209,8 @@ function fileJSONHandler(e) {
 
 function pushTemplates() {
   getTemplateDict(environment.vault.url, App.authToken).then(dict => {
-    workingBinding.pushTemplates(environment.vault.url, App.authToken, dict);
-    m.mount(document.getElementById('template-output'), JSONComponent(workingBinding.asJSONBinding()));
+    workingBinding.pushTemplates(App.templates);
+    m.mount(document.getElementById('template-output'), JSONComponent(workingBinding.toJSON()));
   });
 }
 

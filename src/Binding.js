@@ -1,7 +1,5 @@
 'use strict';
 
-import m from 'mithril';
-
 import LeafBinding from './LeafBinding.js';
 
 /**
@@ -56,59 +54,22 @@ export default function Binding(name, schemaObject) {
            };
   };
 
-  this.raw_slots = [];
-  // Depends on template data
-  // TODO try make it an async
-  this.getSlotsMap = function() {
-    if (this.template.slots) {
-      return this.template.slots;
-    } else {
-      // raw_slots an array of Slots
-      return this.raw_slots.reduce((acc, slot) => {
-        acc[slot.name] = slot;
-        return acc;
-      }, {});
-    }
-  };
-
   /**
    * Call SDK services to create all needed Templates
    * Update in place with responses
    */
-  this.pushTemplates = function (vaultHost, token, templateDict) {
-    console.log(this.asTemplateData());
-    //TODO if exist, do PUT instead
-    let authHeader = { 'Authorization': 'Bearer ' + token };
-
-    // Test existence
-
-    // If exist
-    if (templateDict[this.name]) {
-      // alert('whoops it exists!');
-      this.template = templateDict[this.name];
-    } else {
-      m.request({
-        method: 'POST',
-        url: vaultHost + '/item_templates',
-        headers: authHeader,
-        body: this.asTemplateData()
-      }).then(data => {
-        console.log(data);
-        this.template = data.item_template;
-        this.raw_slots = data.slots;
-      });
-    }
+  this.pushTemplates = async function (store) {
+    this.template = await store.saveUnlessExists(this.asTemplateData());
 
     for (let t in this.associated) {
-      this.associated[t].pushTemplates(vaultHost, token, templateDict);
+      this.associated[t].pushTemplates(store);
     }
   };
 
   /** Record ItemTemplate and Slot ids against their JSON paths */
-  this.asJSONBinding = function() {
-    //let slotMap = this.getSlotsMap();
+  this.toJSON = function() {
     let propMap = this.children.reduce((acc, x) => {
-      acc[x.name] = x.asJSONBinding();
+      acc[x.name] = x.toJSON();
       return acc;
     }, {});
 
