@@ -29,25 +29,6 @@ let User = {
   authData: {},
 };
 
-// TODO unused
-//Note: Template creation is not defined in ItemTemplateAPI...
-let APIs = {
-  vaultFactory: Meeco.vaultAPIFactory(environment),
-  ItemService: new Meeco.ItemService(environment),
-  init: function () {
-
-    // let userVault = APIs.vaultFactory(User.authData);
-    // if (App.authToken) {
-    //   APIs.ItemAPI = APIs.vaultFactory({vault_access_token: App.authToken}).ItemApi;
-    // }
-
-    // APIs.ItemTemplateAPI = userVault.ItemTemplateApi;
-    // APIs.ItemAPI = userVault.ItemApi;
-    // APIs.SlotAPI = userVault.SlotApi;
-    console.log(APIs);
-  }
-};
-
 // App state
 let App = {
   //Target for conversion to Item
@@ -55,15 +36,17 @@ let App = {
   authToken: sessionStorage.getItem(ACCESS_TOKEN),
   userDEK: Meeco.EncryptionKey.fromRaw(sessionStorage.getItem(USER_DEK)),
   loginService: new Meeco.UserService(environment),
+  ItemService: new Meeco.ItemService(environment),
   templates: null,
-  //Name -> Id map
-  templateDict: {},
+  //Generated binding
+  workingBinding: null,
+  //TODO - until API call
+  resultItems: [],
+
   login: async function(accessToken) {
     console.log('begin auth');
     User.authData = await App.loginService.get(User.password, User.secret);
     console.log(User.authData);
-
-    // APIs.init();
 
     sessionStorage.setItem(ACCESS_TOKEN, User.authData.vault_access_token);
     sessionStorage.setItem(USER_DEK, User.authData.data_encryption_key.key);
@@ -82,36 +65,6 @@ let App = {
 if (App.authToken) {
   App.templates = new TemplateSchemaStore(environment.vault.url, App.authToken);
 }
-
-APIs.init();
-
-//Generated binding
-let workingBinding;
-
-function getTemplateDict(vaultHost, token) {
-    return m.request({
-      method: 'GET',
-      url: vaultHost + '/item_templates',
-      headers: { 'Authorization': 'Bearer ' + token }
-    }).then(data => {
-      let slotMap = data.slots.reduce((acc, x) => {
-        acc[x.id] = x;
-        return acc;
-      }, {});
-
-      App.templateDict = data.item_templates.reduce((acc, x) => {
-        acc[x.name] = x;
-        x.slots = x.slot_ids.map(y => slotMap[y]);
-        return acc;
-      }, {});
-      console.log(App.templateDict);
-
-      return App.templateDict;
-    });
-}
-
-//TODO - until API call
-let resultItems = [];
 
 //TODO
 // Use a binding to rewrite an instance of a schema
@@ -159,11 +112,11 @@ async function transformData(binding, data) {
   };
 
   // TODO encode vals - FML API clash
-  //let newItem = await APIs.ItemService.create(App.authToken, App.userDEK, new Meeco.ItemCreateData(itemData));
+  //let newItem = await App.ItemService.create(App.authToken, App.userDEK, new Meeco.ItemCreateData(itemData));
   // try {
 
   let newItemResponse = await Promise.all(itemData.slots.map(function (slot) {
-    return APIs.ItemService.encryptSlot(slot, App.userDEK);
+    return App.ItemService.encryptSlot(slot, App.userDEK);
   })).then(slots_attributes =>
     m.request({
       method: 'POST',
@@ -180,7 +133,7 @@ async function transformData(binding, data) {
 
   let newItem = newItemResponse.item;
 
-  resultItems.push(newItem);
+  App.resultItems.push(newItem);
   return newItem.id;
   // } catch (e) {
   //   return Promise.reject(e);
@@ -189,15 +142,20 @@ async function transformData(binding, data) {
 
 async function convertItemHandler() {
   let data = JSON.parse(App.inputJSON);
-  await transformData(workingBinding.toJSON(), data);
-  console.log(resultItems);
-  m.mount(document.getElementById('result-output'), JSONComponent(resultItems));
+  await transformData(App.workingBinding.toJSON(), data);
+  console.log(App.resultItems);
+  m.mount(document.getElementById('result-output'), JSONComponent(App.resultItems));
 }
 
 function pushTemplates() {
-  getTemplateDict(environment.vault.url, App.authToken).then(() => {
-    workingBinding.pushTemplates(App.templates);
-    m.mount(document.getElementById('template-output'), JSONComponent(workingBinding.toJSON()));
+  if (!App.authToken) {
+    alert('Not Authorised!');
+    throw Error('Not Authorised');
+  }
+
+  App.templates.loadTemplates().then(() => {
+    App.workingBinding.pushTemplates(App.templates);
+    m.mount(document.getElementById('template-output'), JSONComponent(App.workingBinding.toJSON()));
   });
 }
 
@@ -220,8 +178,8 @@ function JSONFileComponent(callback) {
 }
 
 let inSchemaC = JSONFileComponent((name, data) => {
-  workingBinding = new Binding(name.replace('.', '_'), data);
-  m.mount(document.getElementById('outline'), BindingComponent(workingBinding));
+  App.workingBinding = new Binding(name.replace('.', '_'), data);
+  m.mount(document.getElementById('outline'), BindingComponent(App.workingBinding));
 });
 
 let inBindingC = JSONFileComponent((name, data) => {
