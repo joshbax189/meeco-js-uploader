@@ -194,25 +194,40 @@ async function convertItemHandler() {
   m.mount(document.getElementById('result-output'), JSONComponent(resultItems));
 }
 
-function fileJSONHandler(e) {
-  const f = e.target.files[0];
-  const reader = new FileReader();
-
-  reader.addEventListener('load', function (e) {
-    let data = JSON.parse(e.target.result);
-    //TODO report error if no JSON
-    workingBinding = new Binding(f.name.replace('.', '_'), data);
-    m.mount(document.getElementById('outline'), BindingComponent(workingBinding));
-  });
-  reader.readAsText(f);
-}
-
 function pushTemplates() {
-  getTemplateDict(environment.vault.url, App.authToken).then(dict => {
+  getTemplateDict(environment.vault.url, App.authToken).then(() => {
     workingBinding.pushTemplates(App.templates);
     m.mount(document.getElementById('template-output'), JSONComponent(workingBinding.toJSON()));
   });
 }
+
+function JSONFileComponent(callback) {
+
+  function fileJSONHandler(e) {
+    const f = e.target.files[0];
+    const reader = new FileReader();
+
+    reader.addEventListener('load', function (e) {
+      let data = JSON.parse(e.target.result);
+      callback(f.name, data);
+    });
+    reader.readAsText(f);
+  }
+
+  return {
+    view: () => m('input', {type: 'file', onchange: fileJSONHandler}),
+  };
+}
+
+let inSchemaC = JSONFileComponent((name, data) => {
+  workingBinding = new Binding(name.replace('.', '_'), data);
+  m.mount(document.getElementById('outline'), BindingComponent(workingBinding));
+});
+
+let inBindingC = JSONFileComponent((name, data) => {
+  m.mount(document.getElementById('template-output'), JSONComponent(data));
+  //TODO implement Binding.fromJSON to generate this
+});
 
 m.render(document.body, [
   m('div', [
@@ -231,7 +246,7 @@ m.render(document.body, [
     m('div', [
       m('div', [
         m('h4', 'JSON schema'),
-        m('input', {type: 'file', onchange: fileJSONHandler}),
+        m(inSchemaC),
       ]),
       m('#outline'),
       m('button', {onclick: pushTemplates}, 'Push Templates'),
@@ -239,6 +254,7 @@ m.render(document.body, [
     m('div', [
       m('h4', 'Template Binding'),
       m('button', 'Save'),
+      m(inBindingC),
       m('p#template-output', 'None')
     ]),
   ]),
