@@ -6,68 +6,72 @@ import LeafBinding from './LeafBinding.js';
  * Binds a JSONSchema given by schemaObject to an ItemTemplate specified by name.
  * Creates the ItemTemplate if needed.
  */
-export default function Binding(name, schemaObject) {
-  this.name = name;
-  this.schemaObject = schemaObject;
-  //Use label to resolve references
-  if (schemaObject.$id) {
-    this.label = schemaObject.$id;
-  }
-  // Do not create an ItemTemplate or include this among the Slots of the parent Item.
-  this.hidden = false;
-  // Store any existing ItemTemplate data here
-  this.template = { id: 123 };
+export default class Binding {
 
-  // All properties of this object as Bindings or LeafBindings
-  this.children = [];
-  // Children which are LeafSlots PLUS key_value type slots representing Bindings
-  this.slots = [];
-  // Subset of this.children which are Bindings (not LeafBindings)
-  this.associated = [];
+  constructor(name, schemaObject) {
+    this.name = name;
+    this.schemaObject = schemaObject;
+    //Use label to resolve references
+    if (schemaObject.$id) {
+      this.label = schemaObject.$id;
+    }
+    // Do not create an ItemTemplate or include this among the Slots of the parent Item.
+    this.hidden = false;
+    // Store any existing ItemTemplate data here
+    this.template = { id: 123 };
 
-  for(let k in schemaObject.properties) {
-    //TODO address required props, but required prop in ItemTemplate is broken...
-    //TODO references!
+    // All properties of this object as Bindings or LeafBindings
+    this.children = [];
+    // Children which are LeafSlots PLUS key_value type slots representing Bindings
+    this.slots = [];
+    // Subset of this.children which are Bindings (not LeafBindings)
+    this.associated = [];
 
-    let target = schemaObject.properties[k];
-    if (target.type == 'object') {
-      // create a link slot
-      this.slots.push(new LeafBinding(k, {type: 'key_value', description: 'pointer to object ' + k}));
-      // create a Binding
-      let b = new Binding(k, target);
-      this.associated.push(b);
-      this.children.push(b);
-    } else {
-      // Note that Arrays are handled elsewhere
-      let b = new LeafBinding(k, target);
-      this.slots.push(b);
-      this.children.push(b);
+    for(let k in schemaObject.properties) {
+      //TODO address required props, but required prop in ItemTemplate is broken...
+      //TODO references!
+
+      let target = schemaObject.properties[k];
+      if (target.type == 'object') {
+        // create a link slot
+        this.slots.push(new LeafBinding(k, {type: 'key_value', description: 'pointer to object ' + k}));
+        // create a Binding
+        let b = new Binding(k, target);
+        this.associated.push(b);
+        this.children.push(b);
+      } else {
+        // Note that Arrays are handled elsewhere
+        let b = new LeafBinding(k, target);
+        this.slots.push(b);
+        this.children.push(b);
+      }
     }
   }
 
   /** Generate POST data for /items_templates */
-  this.asTemplateData = function () {
+  asTemplateData () {
     return { label: this.name,
              name: this.name,
              description: this.schemaObject.description,
              slots_attributes: this.slots.map(x => x.asSlotData())
            };
-  };
+  }
 
   /**
    * Call SDK services to create all needed Templates
    * Update in place with responses
+   * @param saveTemplateCallback POST the new template and return it.
    */
-  this.pushTemplates = async function (store) {
-    this.template = await store.saveUnlessExists(this.asTemplateData());
+  async pushTemplates(saveTemplateCallback) {
+    this.template = await saveTemplateCallback(this.asTemplateData());
 
     for (let t in this.associated) {
-      this.associated[t].pushTemplates(store);
+      this.associated[t].pushTemplates(saveTemplateCallback);
     }
   };
 
   /** Record ItemTemplate and Slot ids against their JSON paths */
-  this.toJSON = function() {
+  toJSON() {
     let propMap = this.children.reduce((acc, x) => {
       acc[x.name] = x.toJSON();
       return acc;

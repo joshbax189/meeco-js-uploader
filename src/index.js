@@ -166,7 +166,7 @@ function pushTemplates() {
   }
 
   App.templates.loadTemplates().then(() => {
-    App.workingBinding.pushTemplates(App.templates);
+    App.workingBinding.pushTemplates(t => App.templates.saveUnlessExists(t));
     m.mount(document.getElementById('template-output'), JSONComponent(App.workingBinding.toJSON()));
   });
 }
