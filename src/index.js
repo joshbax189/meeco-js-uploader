@@ -26,7 +26,19 @@ const environment = {
 let User = {
   secret: "1.4aBdw1.76BkP9-Wh6SFH-SLSboT-Ug82T4-61TJ6B-kajWc5-5vEUDe-jk",
   password: '',
-  authData: {},
+  login: async function() {
+    let service = new Meeco.UserService(environment);
+    console.log('begin auth');
+    try {
+      let authData = await service.get(User.password, User.secret);
+      console.log(User.authData);
+      return authData;
+    } catch(err) {
+      alert(err);
+      console.log(err);
+    }
+    return {};
+  },
 };
 
 // App state
@@ -35,7 +47,7 @@ let App = {
   inputJSON: '{"familyName": "Jim","givenName": "Bob","honorificPrefix": [ "Hon.", "Dr.", "Mr" ],"email": {"type": "home","value": "jim.bob@email.com"}}',
   authToken: sessionStorage.getItem(ACCESS_TOKEN),
   userDEK: Meeco.EncryptionKey.fromRaw(sessionStorage.getItem(USER_DEK)),
-  loginService: new Meeco.UserService(environment),
+
   ItemService: new Meeco.ItemService(environment),
   templates: null,
   //Generated binding
@@ -44,15 +56,15 @@ let App = {
   resultItems: [],
 
   login: async function(accessToken) {
-    console.log('begin auth');
-    User.authData = await App.loginService.get(User.password, User.secret);
-    console.log(User.authData);
+    let authData = await User.login();
+    let token = authData.vault_access_token;
+    let dek = authData.data_encryption_key.key;
 
-    sessionStorage.setItem(ACCESS_TOKEN, User.authData.vault_access_token);
-    sessionStorage.setItem(USER_DEK, User.authData.data_encryption_key.key);
-    App.authToken = User.authData.vault_access_token;
-    App.userDEK = User.authData.data_encryption_key.key;
-    App.templates = new TemplateSchemaStore(environment.vault.url, App.authToken);
+    sessionStorage.setItem(ACCESS_TOKEN, token);
+    sessionStorage.setItem(USER_DEK, dek);
+    App.authToken = token;
+    App.userDEK = dek;
+    App.templates = new TemplateSchemaStore(environment.vault.url, token);
   },
   logout: function() {
     sessionStorage.removeItem(ACCESS_TOKEN);
@@ -66,7 +78,7 @@ if (App.authToken) {
   App.templates = new TemplateSchemaStore(environment.vault.url, App.authToken);
 }
 
-//TODO
+
 // Use a binding to rewrite an instance of a schema
 async function transformData(binding, data) {
   // Walk the JSON and binding at the same time
@@ -198,7 +210,7 @@ m.render(document.body, [
                 oninput: function (e) { User.password = e.target.value; }}),
     m('button', {onclick: App.login}, 'Go'),
     m('button', {onclick: App.logout}, 'Clear Token'),
-    m('p', App.authToken ? 'Token: ' + App.authToken : null),
+    App.authToken ? m('p', 'Token: ' + App.authToken) : null,
   ]),
   m('.horiz', [
     m('div', [
