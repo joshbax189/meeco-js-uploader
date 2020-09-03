@@ -10,7 +10,11 @@ export default class TemplateSchemaStore {
     this.accessToken = accessToken;
     this.idSlotMap = [];
     this.nameTemplateMap = {};
-    this.loadTemplates();
+    this.loadTemplates().then(d => {
+      //verify arrayTemplate exists
+      this.arrayTemplate();
+      console.log(d);
+    });
   }
 
   insertInSlotMap(slots) {
@@ -42,7 +46,7 @@ export default class TemplateSchemaStore {
 
   //get the unique template representing arrays
   arrayTemplate() {
-    return this.saveUnlessExists({ name: ARRAY_NAME });
+    return this.saveUnlessExists({ name: ARRAY_NAME, label: 'array', slots_attributes: [] });
   }
 
   getTemplateByName(name) {
