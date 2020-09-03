@@ -3,7 +3,7 @@
 import m from 'mithril';
 import * as Meeco from '@meeco/sdk';
 
-import Binding from './Binding.js';
+import { Binding, JSONSchemaToBinding } from './Binding.js';
 import BindingComponent from './BindingComponent.js';
 import JSONComponent from './JSONComponent.js';
 import TemplateSchemaStore from './TemplateSchemaStore.js';
@@ -189,7 +189,7 @@ function JSONFileComponent(callback) {
 }
 
 let inSchemaC = JSONFileComponent((name, data) => {
-  App.workingBinding = new Binding(name.replace('.', '_'), data);
+  App.workingBinding = JSONSchemaToBinding(name.replace('.', '_'), data);
   m.mount(document.getElementById('outline'), BindingComponent(App.workingBinding));
 });
 

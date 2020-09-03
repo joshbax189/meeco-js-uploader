@@ -2,65 +2,67 @@
 
 import { RefSlot, ArraySlot, BasicSlot } from './Slottable.js';
 
+export function JSONSchemaToBinding(name, schemaObject) {
+  let children = [];
+  for(let k in schemaObject.properties) {
+    let target = schemaObject.properties[k];
+    if (target.type == 'object') {
+      children.push(JSONSchemaToBinding(k, target));
+    } else if (target.type == 'array') {
+      children.push(new ArraySlot(k, target.description, target.type, target.items.type));
+    } else if (target.$ref) {
+      children.push(new RefSlot(k, target.$ref, 'reference'));
+    } else {
+      children.push(new BasicSlot(k, target.description, target.type));
+    }
+  }
+
+  return new Binding(name,
+                     (schemaObject.$id || name),
+                     schemaObject.description,
+                     children);
+}
+
+
 /**
  * Binds a JSONSchema given by schemaObject to an ItemTemplate specified by name.
  * Creates the ItemTemplate if needed.
+ * @param {} name
+ * @param {} label Used to resolve references by matching with schema.$id
+ * @param {} description
+ * @param {} children
  */
 export default class Binding {
 
-  constructor(name, schemaObject) {
+  constructor(name, label, description, children) {
     this.name = name;
-    this.schemaObject = schemaObject;
-    //Use label to resolve references
-    if (schemaObject.$id) {
-      this.label = schemaObject.$id;
-    }
+    this.label = label;
+    //TODO
     // Do not create an ItemTemplate or include this among the Slots of the parent Item.
     this.hidden = false;
-    // Store any existing ItemTemplate data here
+    // Store any existing ItemTemplate data
     this.template = { id: 123 };
 
     // All properties of this object as Bindings or LeafBindings
-    this.children = [];
-    // Children which are LeafSlots PLUS key_value type slots representing Bindings
-    this.slots = [];
-    // Subset of this.children which are Bindings (not LeafBindings)
-    this.associated = [];
+    this.children = children;
+  }
 
-    for(let k in schemaObject.properties) {
-      //TODO address required props, but required prop in ItemTemplate is broken...
-      //TODO references!
+  slots() {
+    return this.children.map(x => {
+      return (x instanceof Binding) ? new RefSlot(x.name, 'pointer to object ' + x.name) : x;
+    });
+  }
 
-      let target = schemaObject.properties[k];
-      if (target.type == 'object') {
-        // create a link slot
-        this.slots.push(new RefSlot(k, 'pointer to object ' + k));
-        // create a Binding
-        let b = new Binding(k, target);
-        this.associated.push(b);
-        this.children.push(b);
-      } else if (target.type == 'array') {
-        let b = new ArraySlot(k, target.description, target.type, target.items.type);
-        this.slots.push(b);
-        this.children.push(b);
-      } else if (target.$ref) {
-        let b = new RefSlot(k, target.$ref, 'reference');
-        this.slots.push(b);
-        this.children.push(b);
-      } else {
-        let b = new BasicSlot(k, target.description, target.type);
-        this.slots.push(b);
-        this.children.push(b);
-      }
-    }
+  associated() {
+    return this.children.filter(x => x instanceof Binding);
   }
 
   /** Generate POST data for /items_templates */
   asTemplateData () {
     return { label: this.name,
              name: this.name,
-             description: this.schemaObject.description,
-             slots_attributes: this.slots.map(x => x.asSlotData())
+             description: this.description,
+             slots_attributes: this.slots().map(x => x.asSlotData())
            };
   }
 
@@ -72,9 +74,7 @@ export default class Binding {
   async pushTemplates(saveTemplateCallback) {
     this.template = await saveTemplateCallback(this.asTemplateData());
 
-    for (let t in this.associated) {
-      this.associated[t].pushTemplates(saveTemplateCallback);
-    }
+    this.associated().forEach(t => t.pushTemplates(saveTemplateCallback));
   };
 
   /** Record ItemTemplate and Slot ids against their JSON paths */

@@ -27,12 +27,10 @@ The 'Push Templates' function recursively creates these objects and links the id
 - Polyfills?
 - Save Template button
 - Load a Template
-- Decouple JSONSchema from Binding
-  What if we are using swagger JSON?
 - JSON Schema Refs
   Try using jsonschema, or json-schema-ref-parser to deal with them
 - Add other schema sources
-  Swagger, OpenAPI?, Typed APIs (.d.ts), JSON guesser
+  Swagger, Typed APIs (.d.ts), JSON guesser
 - Try out embedded binding specs
 - Try out decoding from Items
 - Try out storing sub-Item references in description property
