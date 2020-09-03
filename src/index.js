@@ -4,7 +4,6 @@ import m from 'mithril';
 import * as Meeco from '@meeco/sdk';
 
 import Binding from './Binding.js';
-import LeafBinding from './LeafBinding.js';
 import BindingComponent from './BindingComponent.js';
 import JSONComponent from './JSONComponent.js';
 import TemplateSchemaStore from './TemplateSchemaStore.js';

@@ -3,7 +3,7 @@
 import m from 'mithril';
 
 import Binding from './Binding.js';
-import LeafBinding from './LeafBinding.js';
+import { Slottable } from './Slottable.js';
 
 let mapControlC = {
   view: () => m('span', [
@@ -23,7 +23,7 @@ export default function BindingComponent(binding) {
         m(mapControlC),
       ])
     };
-  } else if (binding instanceof LeafBinding) {
+  } else if (binding instanceof Slottable) {
     return {
       view: () => m('.node', [
         m('input', {type: 'text', value: binding.name}),

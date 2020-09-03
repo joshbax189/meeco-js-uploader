@@ -1,6 +1,6 @@
 'use strict';
 
-import LeafBinding from './LeafBinding.js';
+import { RefSlot, ArraySlot, BasicSlot } from './Slottable.js';
 
 /**
  * Binds a JSONSchema given by schemaObject to an ItemTemplate specified by name.
@@ -34,14 +34,21 @@ export default class Binding {
       let target = schemaObject.properties[k];
       if (target.type == 'object') {
         // create a link slot
-        this.slots.push(new LeafBinding(k, {type: 'key_value', description: 'pointer to object ' + k}));
+        this.slots.push(new RefSlot(k, 'pointer to object ' + k));
         // create a Binding
         let b = new Binding(k, target);
         this.associated.push(b);
         this.children.push(b);
+      } else if (target.type == 'array') {
+        let b = new ArraySlot(k, target.description, target.type, target.items.type);
+        this.slots.push(b);
+        this.children.push(b);
+      } else if (target.$ref) {
+        let b = new RefSlot(k, target.$ref, 'reference');
+        this.slots.push(b);
+        this.children.push(b);
       } else {
-        // Note that Arrays are handled elsewhere
-        let b = new LeafBinding(k, target);
+        let b = new BasicSlot(k, target.description, target.type);
         this.slots.push(b);
         this.children.push(b);
       }
@@ -81,7 +88,7 @@ export default class Binding {
       //label: this.name,
       name: this.name,
       type: 'item_template',
-      id: this.template.id,
+      // id: this.template.id,
       template_name: this.name,
       properties: propMap
     };
