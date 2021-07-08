@@ -23,7 +23,7 @@ const environment = {
 };
 
 let User = {
-  secret: "1.4aBdw1.76BkP9-Wh6SFH-SLSboT-Ug82T4-61TJ6B-kajWc5-5vEUDe-jk",
+  secret: '1.ex12Q9.jgqgd2-kE6iKA-eYi7zV-B4R48D-m5KZk9-9qSYhQ-pfaj4i-3',
   password: '',
   login: async function() {
     let service = new Meeco.UserService(environment);
@@ -158,6 +158,31 @@ async function convertItemHandler() {
   m.mount(document.getElementById('result-output'), JSONComponent(App.resultItems));
 }
 
+let DLButton = {
+  oninit: function(v) {
+	  v.state.name = 'binding.json';
+	  v.state.data = '';
+	  v.state.updateData = () => {
+	    v.state.data = 'data:application/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(App.workingBinding.toJSON()));
+	  }
+  },
+  view: function(v) {
+	  return [
+	    m('a', {
+		    download: v.state.name,
+		    href: v.state.data,
+		    onclick: v.state.updateData,
+	    }, m('button', 'Save Locally')),
+	    m('input', {
+		    type: 'text/json',
+		    required: true,
+        value: v.state.name,
+		    oninput: e => v.state.name = e.target.value
+	    }),
+	  ];
+  }
+}
+
 function pushTemplates() {
   if (!App.authToken) {
     alert('Not Authorised!');
@@ -222,7 +247,7 @@ m.render(document.body, [
     ]),
     m('div', [
       m('h4', 'Template Binding'),
-      m('button', 'Save'),
+      m(DLButton),
       m(inBindingC),
       m('p#template-output', 'None')
     ]),
